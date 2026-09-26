@@ -91,7 +91,19 @@ local DataStoreService = game:GetService("DataStoreService")
 
 local GameConfig = require(ReplicatedStorage:WaitForChild("GameConfig"))
 
-local playerDataStore = DataStoreService:GetDataStore("SimulatorData_v1")
+-- GetDataStore echoue si le jeu n'est pas publie ou si l'acces API Studio
+-- n'est pas active : dans ce cas, on continue quand meme sans sauvegarde.
+local playerDataStore
+do
+	local success, result = pcall(function()
+		return DataStoreService:GetDataStore("SimulatorData_v1")
+	end)
+	if success then
+		playerDataStore = result
+	else
+		warn("DataStore indisponible (jeu non publie ou 'Enable Studio Access to API Services' desactive). La progression ne sera pas sauvegardee.")
+	end
+end
 
 -- Cree le dossier des RemoteEvents s'il n'existe pas deja
 local remotes = ReplicatedStorage:FindFirstChild("Remotes")
@@ -166,6 +178,9 @@ local function getDefaultData()
 end
 
 local function loadData(player)
+	if not playerDataStore then
+		return getDefaultData()
+	end
 	local success, result = pcall(function()
 		return playerDataStore:GetAsync("Player_" .. player.UserId)
 	end)
@@ -176,6 +191,9 @@ local function loadData(player)
 end
 
 local function saveData(player)
+	if not playerDataStore then
+		return
+	end
 	local data = playerData[player.UserId]
 	if not data then
 		return
